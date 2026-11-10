@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Base64/Base64URL安全エンコード＆デコードツール</title>
+<script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-950 text-gray-100 min-h-screen p-4">
+<div class="max-w-4xl mx-auto">
+  <h1 class="text-2xl font-bold text-center mb-2 text-blue-400">Base64 / Base64URL エンコード＆デコードツール</h1>
+  <p class="text-center text-gray-400 text-sm mb-6">テキスト・HEXバイト列を Base64標準 / Base64URL / Base32 に相互変換</p>
+
+  <!-- 入力セクション -->
+  <div class="bg-gray-900 rounded-xl p-5 mb-4 border border-gray-700">
+    <div class="flex gap-3 mb-3 flex-wrap">
+      <span class="text-gray-400 text-sm font-semibold self-center">入力モード:</span>
+      <label class="flex items-center gap-1 cursor-pointer">
+        <input type="radio" name="inputMode" value="text" checked class="accent-blue-500"> <span class="text-sm">テキスト文字列</span>
+      </label>
+      <label class="flex items-center gap-1 cursor-pointer">
+        <input type="radio" name="inputMode" value="hex"> <span class="text-sm">HEX文字列</span>
+      </label>
+      <label class="flex items-center gap-1 cursor-pointer ml-4">
+        <input type="checkbox" id="paddingOpt" checked class="accent-blue-500"> <span class="text-sm">パディング(=)あり</span>
+      </label>
+      <label class="flex items-center gap-1 cursor-pointer">
+        <input type="checkbox" id="decodeMode" class="accent-green-500"> <span class="text-sm text-green-400">デコードモード</span>
+      </label>
+    </div>
+    <textarea id="inputText" rows="4" placeholder="ここに入力してください..."
+      class="w-full bg-gray-800 border border-gray-600 rounded-lg p-3 text-sm font-mono text-gray-100 resize-y focus:outline-none focus:border-blue-500"></textarea>
+    <div id="inputStats" class="text-xs text-gray-500 mt-1"></div>
+  </div>
+
+  <!-- デコード入力セクション -->
+  <div id="decodeSection" class="hidden bg-gray-900 rounded-xl p-5 mb-4 border border-gray-700">
+    <div class="flex gap-3 mb-3 flex-wrap">
+      <span class="text-gray-400 text-sm font-semibold self-center">デコード形式:</span>
+      <label class="flex items-center gap-1 cursor-pointer">
+        <input type="radio" name="decodeFormat" value="base64" checked class="accent-blue-500"> <span class="text-sm">Base64標準</span>
+      </label>
+      <label class="flex items-center gap-1 cursor-pointer">
+        <input type="radio" name="decodeFormat" value="base64url"> <span class="text-sm">Base64URL</span>
+      </label>
+      <label class="flex items-center gap-1 cursor-pointer">
+        <input type="radio" name="decodeFormat" value="base32"> <span class="text-sm">Base32</span>
+      </label>
+    </div>
+    <div class="bg-gray-800 rounded-lg p-3">
+      <div id="decodeResult" class="font-mono text-sm break-all text-green-300">デコード結果がここに表示されます</div>
+    </div>
+  </div>
+
+  <!-- エンコード出力セクション -->
+  <div id="encodeSection">
+    <div class="grid grid-cols-1 gap-3">
+      <!-- Base64標準 -->
+      <div class="bg-gray-900 rounded-xl p-4 border border-blue-800">
+        <div class="flex items-center justify-between mb-2">
+          <div>
+            <span class="text-blue-400 font-semibold text-sm">Base64 標準</span>
+            <span class="text-xs text-gray-500 ml-2">RFC 4648 §4・文字: A-Z a-z 0-9 + / =</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <span id="b64len" class="text-xs text-gray-500"></span>
+            <button onclick="copyText('b64out','copyB64')" id="copyB64" class="text-xs bg-blue-700 hover:bg-blue-600 text-white px-2 py-1 rounded transition">コピー</button>
+          </div>
+        </div>
+        <div id="b64out" class="bg-gray-800 rounded p-2 font-mono text-sm break-all text-blue-200 min-h-8"></div>
+      </div>
+
+      <!-- Base64URL -->
+      <div class="bg-gray-900 rounded-xl p-4 border border-purple-800">
+        <div class="flex items-center justify-between mb-2">
+          <div>
+            <span class="text-purple-400 font-semibold text-sm">Base64URL</span>
+            <span class="text-xs text-gray-500 ml-2">RFC 4648 §5・文字: A-Z a-z 0-9 - _（+/を置換）</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <span id="b64urllen" class="text-xs text-gray-500"></span>
+            <button onclick="copyText('b64urlout','copyB64URL')" id="copyB64URL" class="text-xs bg-purple-700 hover:bg-purple-600 text-white px-2 py-1 rounded transition">コピー</button>
+          </div>
+        </div>
+        <div id="b64urlout" class="bg-gray-800 rounded p-2 font-mono text-sm break-all text-purple-200 min-h-8"></div>
+      </div>
+
+      <!-- Base32 -->
+      <div class="bg-gray-900 rounded-xl p-4 border border-green-800">
+        <div class="flex items-center justify-between mb-2">
+          <div>
+            <span class="text-green-400 font-semibold text-sm">Base32</span>
+            <span class="text-xs text-gray-500 ml-2">RFC 4648 §6・文字: A-Z 2-7 =</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <span id="b32len" class="text-xs text-gray-500"></span>
+            <button onclick="copyText('b32out','copyB32')" id="copyB32" class="text-xs bg-green-700 hover:bg-green-600 text-white px-2 py-1 rounded transition">コピー</button>
+          </div>
+        </div>
+        <div id="b32out" class="bg-gray-800 rounded p-2 font-mono text-sm break-all text-green-200 min-h-8"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- バイト情報 -->
+  <div id="byteInfo" class="bg-gray-900 rounded-xl p-4 mt-3 border border-gray-700 text-sm text-gray-400"></div>
+</div>
+
+<script>
+const inputText = document.getElementById('inputText');
+const paddingOpt = document.getElementById('paddingOpt');
+const decodeMode = document.getElementById('decodeMode');
+
+function getInputMode() {
+  return document.querySelector('input[name="inputMode"]:checked').value;
+}
+function getDecodeFormat() {
+  return document.querySelector('input[name="decodeFormat"]:checked').value;
+}
+
+function textToBytes(str) {
+  return new TextEncoder().encode(str);
+}
+
+function hexToBytes(hex) {
+  const clean = hex.replace(/\s+/g, '');
+  if (clean.length % 2 !== 0) throw new Error('HEX文字列の長さが奇数です');
+  if (!/^[0-9a-fA-F]*$/.test(clean)) throw new Error('不正なHEX文字が含まれています');
+  const bytes = new Uint8Array(clean.length / 2);
+  for (let i = 0; i < clean.length; i += 2) {
+    bytes[i / 2] = parseInt(clean.slice(i, i + 2), 16);
+  }
+  return bytes;
+}
+
+function bytesToBase64(bytes) {
+  let binary = '';
+  for (let b of bytes) binary += String.fromCharCode(b);
+  return btoa(binary);
+}
+
+function base64ToBase64URL(b64, padding) {
+  let url = b64.replace(/\+/g, '-').replace(/\//g, '_');
+  if (!padding) url = url.replace(/=/g, '');
+  return url;
+}
+
+const BASE32_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
+function bytesToBase32(bytes, padding) {
+  let bits = 0, value = 0, output = '';
+  for (let i = 0; i < bytes.length; i++) {
+    value = (value << 8) | bytes[i];
+    bits += 8;
+    while (bits >= 5) {
+      output += BASE32_ALPHABET[(value >>> (bits - 5)) & 31];
+      bits -= 5;
+    }
+  }
+  if (bits > 0) {
+    output += BASE32_ALPHABET[(value << (5 - bits)) & 31];
+  }
+  if (padding) {
+    while (output.length % 8 !== 0) output += '=';
+  }
+  return output;
+}
+
+function base64Decode(str) {
+  try {
+    const b = atob(str.replace(/-/g, '+').replace(/_/g, '/'));
+    return new Uint8Array([...b].map(c => c.charCodeAt(0)));
+  } catch(e) { throw new Error('Base64デコード失敗: ' + e.message); }
+}
+
+function base32Decode(str) {
+  const clean = str.toUpperCase().replace(/=/g, '');
+  let bits = 0, value = 0;
+  const output = [];
+  for (const ch of clean) {
+    const idx = BASE32_ALPHABET.indexOf(ch);
+    if (idx === -1) throw new Error('不正なBase32文字: ' + ch);
+    value = (value << 5) | idx;
+    bits += 5;
+    if (bits >= 8) { output.push((value >>> (bits - 8)) & 255); bits -= 8; }
+  }
+  return new Uint8Array(output);
+}
+
+function update() {
+  const raw = inputText.value;
+  const mode = getInputMode();
+  const withPad = paddingOpt.checked;
+  const isDecode = decodeMode.checked;
+
+  document.getElementById('encodeSection').classList.toggle('hidden', isDecode);
+  document.getElementById('decodeSection').classList.toggle('hidden', !isDecode);
+
+  if (isDecode) {
+    // デコードモード
+    const fmt = getDecodeFormat();
+    try {
+      let bytes;
+      if (fmt === 'base32') bytes = base32Decode(raw.trim());
+      else bytes = base64Decode(raw.trim());
+      const textResult = new TextDecoder('utf-8', {fatal: false}).decode(bytes);
+      const hexResult = Array.from(bytes).map(b => b.toString(16).padStart(2,'0')).join(' ');
+      document.getElementById('decodeResult').innerHTML =
+        `<div class="text-green-300 mb-1">テキスト: <span class="text-white">${escHtml(textResult)}</span></div>` +
+        `<div class="text-yellow-300 text-xs">HEX: ${hexResult}</div>` +
+        `<div class="text-gray-400 text-xs mt-1">${bytes.length} バイト</div>`;
+    } catch(e) {
+      document.getElementById('decodeResult').innerHTML = `<span class="text-red-400">エラー: ${escHtml(e.message)}</span>`;
+    }
+    return;
+  }
+
+  // エンコードモード
+  let bytes;
+  let err = null;
+  try {
+    bytes = mode === 'hex' ? hexToBytes(raw) : textToBytes(raw);
+  } catch(e) {
+    err = e.message;
+  }
+
+  if (err) {
+    ['b64out','b64urlout','b32out'].forEach(id => {
+      document.getElementById(id).innerHTML = `<span class="text-red-400">エラー: ${escHtml(err)}</span>`;
+    });
+    document.getElementById('byteInfo').innerHTML = '';
+    document.getElementById('inputStats').textContent = '';
+    return;
+  }
+
+  const b64 = bytesToBase64(bytes);
+  const b64pad = withPad ? b64 : b64.replace(/=/g, '');
+  const b64url = base64ToBase64URL(b64, withPad);
+  const b32 = bytesToBase32(bytes, withPad);
+
+  document.getElementById('b64out').textContent = b64pad || '（空）';
+  document.getElementById('b64urlout').textContent = b64url || '（空）';
+  document.getElementById('b32out').textContent = b32 || '（空）';
+
+  document.getElementById('b64len').textContent = b64pad ? `${b64pad.length}文字` : '';
+  document.getElementById('b64urllen').textContent = b64url ? `${b64url.length}文字` : '';
+  document.getElementById('b32len').textContent = b32 ? `${b32.length}文字` : '';
+
+  const hexStr = Array.from(bytes).map(b => b.toString(16).padStart(2,'0')).join(' ');
+  document.getElementById('byteInfo').innerHTML =
+    `<span class="text-yellow-400">バイト数:</span> ${bytes.length} bytes ` +
+    (mode === 'text' ? `<span class="text-gray-500 ml-3">文字数: ${raw.length}</span>` : '') +
+    `<div class="mt-1 text-xs text-gray-600 font-mono break-all">HEX: ${hexStr || '（空）'}</div>`;
+
+  const charCount = mode === 'text' ? `文字数: ${raw.length} / ` : '';
+  document.getElementById('inputStats').textContent = `${charCount}バイト数: ${bytes.length}`;
+}
+
+function copyText(srcId, btnId) {
+  const text = document.getElementById(srcId).textContent;
+  if (!text || text === '（空）') return;
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.getElementById(btnId);
+    const orig = btn.textContent;
+    btn.textContent = 'コピー済!';
+    btn.classList.add('bg-green-700');
+    setTimeout(() => { btn.textContent = orig; btn.classList.remove('bg-green-700'); }, 1500);
+  });
+}
+
+function escHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+inputText.addEventListener('input', update);
+paddingOpt.addEventListener('change', update);
+decodeMode.addEventListener('change', update);
+document.querySelectorAll('input[name="inputMode"]').forEach(r => r.addEventListener('change', update));
+document.querySelectorAll('input[name="decodeFormat"]').forEach(r => r.addEventListener('change', update));
+
+// サンプル
+inputText.value = 'Hello, 世界！ Base64テスト 🚀';
+update();
+</script>
+</body>
+</html>
